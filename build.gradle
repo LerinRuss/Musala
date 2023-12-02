@@ -1,0 +1,61 @@
+plugins {
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("io.micronaut.application") version "4.2.0"
+    id("io.micronaut.aot") version "4.2.0"
+}
+
+version = "0.1"
+group = "test.musala"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    annotationProcessor("io.micronaut:micronaut-http-validation")
+    annotationProcessor("io.micronaut.serde:micronaut-serde-processor")
+    annotationProcessor("io.micronaut.validation:micronaut-validation-processor")
+    annotationProcessor("io.micronaut:micronaut-inject-java")
+    annotationProcessor("org.projectlombok:lombok:$lombokVersion")
+    implementation("io.micronaut.serde:micronaut-serde-jackson")
+    implementation("io.micronaut.validation:micronaut-validation")
+    compileOnly("io.micronaut:micronaut-http-client-jdk")
+    compileOnly("org.projectlombok:lombok:$lombokVersion")
+    runtimeOnly("ch.qos.logback:logback-classic")
+    runtimeOnly("org.yaml:snakeyaml")
+    runtimeOnly("io.micronaut:micronaut-core")
+    testAnnotationProcessor("org.projectlombok:lombok:$lombokVersion")
+    testImplementation("io.micronaut:micronaut-http-client")
+    testCompileOnly("org.projectlombok:lombok:$lombokVersion")
+}
+
+
+application {
+    mainClass.set("test.musala.Application")
+}
+java {
+    sourceCompatibility = JavaVersion.toVersion("17")
+    targetCompatibility = JavaVersion.toVersion("17")
+}
+
+
+graalvmNative.toolchainDetection = false
+micronaut {
+    runtime("netty")
+    testRuntime("junit5")
+    processing {
+        incremental(true)
+        annotations("test.musala.*")
+    }
+    aot {
+    // Please review carefully the optimizations enabled below
+    // Check https://micronaut-projects.github.io/micronaut-aot/latest/guide/ for more details
+        optimizeServiceLoading = false
+        convertYamlToJava = false
+        precomputeOperations = true
+        cacheEnvironment = true
+        optimizeClassLoading = true
+        deduceEnvironment = true
+        optimizeNetty = true
+    }
+}

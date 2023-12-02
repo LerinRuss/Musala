@@ -1,0 +1,8 @@
+services:
+
+  redis-stack:
+    image: redis/redis-stack
+    container_name: drone-redis-stack
+    ports:
+      - "6379:6379"
+      - "8001:8001"
