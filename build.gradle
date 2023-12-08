@@ -12,13 +12,14 @@ repositories {
 }
 
 dependencies {
+    annotationProcessor("org.projectlombok:lombok:$lombokVersion") //always first
     annotationProcessor("io.micronaut:micronaut-http-validation")
     annotationProcessor("io.micronaut.serde:micronaut-serde-processor")
     annotationProcessor("io.micronaut.validation:micronaut-validation-processor")
     annotationProcessor("io.micronaut:micronaut-inject-java")
-    annotationProcessor("org.projectlombok:lombok:$lombokVersion")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
     implementation("io.micronaut.validation:micronaut-validation")
+    implementation("io.micronaut.reactor:micronaut-reactor")
     compileOnly("io.micronaut:micronaut-http-client-jdk")
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     runtimeOnly("ch.qos.logback:logback-classic")

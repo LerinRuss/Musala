@@ -9,6 +9,7 @@ import io.micronaut.http.client.annotation.Client;
 import io.micronaut.http.client.multipart.MultipartBody;
 import io.micronaut.http.uri.UriBuilder;
 import io.micronaut.serde.ObjectMapper;
+import io.micronaut.serde.annotation.Serdeable;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Assertions;
@@ -23,6 +24,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static test.musala.DronesResponses.*;
+
 @MicronautTest
 @DisplayName("Drone Operations")
 public class DronesControllerTest {
@@ -35,17 +38,22 @@ public class DronesControllerTest {
 
     public static final DroneRequest DEFAULT_REGISTRATION_REQUEST = new DroneRequest(
             "1TEST3R002016J", "MIDDLEWEIGHT", 250L, 100);
-    public static final Medicine DEFAULT_FIRST_MEDICINE = new Medicine("first_medicine", 10L, "XYZ 1D456345T", "test_medicine_1.jpg");
-    public static final Medicine DEFAULT_SECOND_MEDICINE = new Medicine("second_medicine", 15L, "XYZ 2D456345T", "test_medicine_2.jpg");
+    public static final Models.Medicine DEFAULT_FIRST_MEDICINE = new Models.Medicine("first_medicine", 10L, "XYZ 1D456345T", "test_medicine_1.jpg");
+    public static final Models.Medicine DEFAULT_SECOND_MEDICINE = new Models.Medicine("second_medicine", 15L, "XYZ 2D456345T", "test_medicine_2.jpg");
 
     @Nested
     @DisplayName("Registering them")
     class DroneRegistration {
         @Test
         public void test_registrationOne() {
-            HttpResponse<?> response = registerDrone(DEFAULT_REGISTRATION_REQUEST);
+            DroneRequest request = DEFAULT_REGISTRATION_REQUEST;
+            HttpResponse<DroneResponse> response = registerDrone(request);
 
             Assertions.assertEquals(HttpStatus.OK, response.getStatus());
+            var expected = new DroneResponse(
+                    request.serialNumber(), Models.Drone.Model.valueOf(request.model()), request.weightLimitGrams(),
+                    request.batteryCapacityPercentage(), Models.Drone.State.IDLE, null);
+            Assertions.assertEquals(expected, response.body());
         }
 
         @Test
@@ -70,71 +78,80 @@ public class DronesControllerTest {
             DroneRequest registrationRequest = DEFAULT_REGISTRATION_REQUEST;
             registerDrone(registrationRequest);
 
-            HttpResponse<?> response = registerMedicine(
+            var registeredMedicines = List.of(DEFAULT_FIRST_MEDICINE, DEFAULT_SECOND_MEDICINE);
+            HttpResponse<DroneResponse> response = registerMedicine(
                     registrationRequest.serialNumber(),
-                    List.of(DEFAULT_FIRST_MEDICINE, DEFAULT_SECOND_MEDICINE));
+                    registeredMedicines);
 
             Assertions.assertEquals(HttpStatus.OK, response.getStatus());
+
+            var expected = new DroneResponse(
+                    registrationRequest.serialNumber(),
+                    Models.Drone.Model.valueOf(registrationRequest.model()),
+                    registrationRequest.weightLimitGrams(), registrationRequest.batteryCapacityPercentage(),
+                    Models.Drone.State.IDLE,
+                    registeredMedicines.stream().map(MedicineResponse::new).toList());
+            Assertions.assertEquals(expected, response.body());
         }
 
         @Test
         public void test_loading_DroneNotExists() {
-
+            Assertions.fail();
         }
 
         @Test
         public void test_loading_NotSendingAllImagesOrMedicines() {
-
+            Assertions.fail();
         }
 
         @Test
         public void test_loading_SendingMedicinesAndImagesWithDifferentCodes() {
-
+            Assertions.fail();
         }
 
         @Test
         public void test_loading_AttemptLoadingLoadedItemToAnotherDrone() {
-
+            Assertions.fail();
         }
 
         @Test
         public void test_loading_AttemptToSendNotFilePart() {
-
+            Assertions.fail();
         }
 
         @Test
         public void test_loading_AttemptToSendWrongPartNames() {
-
+            Assertions.fail();
         }
 
         @Test
         public void test_loading_AttemptToSendWrongJsonFormat() {
-
+            Assertions.fail();
         }
 
         @Test
         public void test_loading_AttemptToSendBigImage() {
-
+            Assertions.fail();
         }
 
         @Test
         public void test_loading_AttemptToSendManyBigImages() {
-
+            Assertions.fail();
         }
 
         @Test
         public void test_loading_AttemptToLoadDroneWithWrongState() {
-
+            Assertions.fail();
         }
 
         @Test
         public void test_loading_AttemptToLoadMedicineSimultaneously() {
-
+            Assertions.fail();
         }
 
         @Test
         public void test_loading_AttemptToLoadImageWithWrongFormat() {
-
+            Assertions.fail();
         }
     }
 
@@ -144,23 +161,33 @@ public class DronesControllerTest {
         @Test
         void test_getting() throws URISyntaxException {
             DroneRequest registeredDrone = DEFAULT_REGISTRATION_REQUEST;
-            Medicine firstRegisteredMedicine = DEFAULT_FIRST_MEDICINE;
-            Medicine secondRegisteredMedicine = DEFAULT_SECOND_MEDICINE;
+            Models.Medicine firstRegisteredMedicine = DEFAULT_FIRST_MEDICINE;
+            Models.Medicine secondRegisteredMedicine = DEFAULT_SECOND_MEDICINE;
 
             registerDrone(registeredDrone);
-            registerMedicine(registeredDrone.serialNumber(), List.of(firstRegisteredMedicine, secondRegisteredMedicine));
+            registerMedicine(
+                    registeredDrone.serialNumber(),
+                    List.of(firstRegisteredMedicine, secondRegisteredMedicine));
 
+            DroneResponse drone = dronesClient.get(registeredDrone.serialNumber());
 
+            var expected = new DroneResponse(
+                    registeredDrone.serialNumber(),
+                    Models.Drone.Model.valueOf(registeredDrone.model()),
+                    registeredDrone.weightLimitGrams(), registeredDrone.batteryCapacityPercentage(),
+                    Models.Drone.State.IDLE,
+                    List.of(new MedicineResponse(firstRegisteredMedicine), new MedicineResponse(secondRegisteredMedicine)));
+            Assertions.assertEquals(expected, drone);
         }
     }
 
-    private HttpResponse<?> registerDrone(DroneRequest registrationRequest) {
-        HttpRequest<DroneRequest> request = HttpRequest.POST("/one", registrationRequest);
+    private HttpResponse<DroneResponse> registerDrone(DroneRequest registrationRequest) {
+        HttpRequest<DroneRequest> request = HttpRequest.POST("/one", registrationRequest).accept(MediaType.APPLICATION_JSON);
 
-        return client.toBlocking().exchange(request);
+        return client.toBlocking().exchange(request, DroneResponse.class);
     }
 
-    private HttpResponse<?> registerMedicine(String droneSerialNumber, List<Medicine> medicines) throws URISyntaxException {
+    private HttpResponse<DroneResponse> registerMedicine(String droneSerialNumber, List<Models.Medicine> medicines) throws URISyntaxException {
         ClassLoader classLoader = DronesControllerTest.class.getClassLoader();
 
         MultipartBody request = medicines.stream().<MultipartBody.Builder>reduce(MultipartBody.builder(),
@@ -192,8 +219,10 @@ public class DronesControllerTest {
                                         .expand(Collections.singletonMap("drone", droneSerialNumber))
                                         .toString(),
                                 request)
-                        .contentType(MediaType.MULTIPART_FORM_DATA_TYPE));
+                        .contentType(MediaType.MULTIPART_FORM_DATA_TYPE),
+                DroneResponse.class);
     }
 
+    @Serdeable
     private record DroneRequest (String serialNumber, String model, long weightLimitGrams, int batteryCapacityPercentage) { }
 }
